@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ParkZone Management</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 14px; background: #f5f5f5; color: #222; }
+
+    /* NAV */
+    nav { background: #fff; border-bottom: 1px solid #ddd; padding: 0 24px; display: flex; align-items: center; gap: 4px; }
+    nav .brand { font-weight: bold; font-size: 16px; margin-right: 20px; padding: 14px 0; }
+    nav button { background: none; border: none; cursor: pointer; padding: 14px; font-size: 13px; color: #555; border-bottom: 2px solid transparent; }
+    nav button.active { color: #3182ce; border-bottom-color: #3182ce; font-weight: bold; }
+
+    /* LAYOUT */
+    .page { padding: 24px; max-width: 1100px; margin: 0 auto; display: none; }
+    .page.active { display: block; }
+
+    /* CARDS */
+    .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
+    .stat { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 18px 20px; }
+    .stat .label { font-size: 12px; color: #888; margin-bottom: 6px; }
+    .stat .value { font-size: 28px; font-weight: bold; }
+
+    /* FORM */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; color: #555; margin-bottom: 5px; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 8px 10px; border: 1px solid #ccc;
+      border-radius: 5px; font-size: 13px;
+    }
+    .btn { padding: 9px 18px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; }
+    .btn-blue  { background: #3182ce; color: #fff; width: 100%; padding: 10px; }
+    .btn-red   { background: #e53e3e; color: #fff; }
+    .btn-green { background: #276749; color: #fff; }
+    .btn-gray  { background: #eee; color: #333; }
+
+    /* TABLE */
+    .table-wrap { background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: #f7f7f7; }
+    th { padding: 10px 14px; text-align: left; border-bottom: 1px solid #eee; font-size: 12px; color: #555; font-weight: 600; }
+    td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; }
+    tr:hover td { background: #fafafa; }
+
+    /* BADGE */
+    .badge { font-size: 11px; padding: 3px 9px; border-radius: 10px; display: inline-block; }
+    .badge-green  { background: #c6f6d5; color: #276749; }
+    .badge-yellow { background: #fefcbf; color: #b7791f; }
+    .badge-red    { background: #fed7d7; color: #c53030; }
+    .badge-blue   { background: #bee3f8; color: #2b6cb0; }
+
+    /* SLOTS */
+    .slot-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    .slot-box { width: 70px; padding: 10px 6px; border-radius: 6px; text-align: center; font-size: 12px; }
+    .slot-free { background: #f0fff4; border: 1px solid #9ae6b4; color: #276749; }
+    .slot-occ  { background: #fff5f5; border: 1px solid #feb2b2; color: #c53030; }
+
+    /* MODAL */
+    .overlay { display: none; position: fixed; inset: 0; background: #0006; align-items: center; justify-content: center; z-index: 100; }
+    .overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 8px; padding: 28px; width: 340px; box-shadow: 0 4px 20px #0003; }
+    .modal h3 { margin-bottom: 16px; }
+    .modal-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 13px; }
+    .modal-row span:first-child { color: #666; }
+    .modal-total { display: flex; justify-content: space-between; margin-top: 12px; font-weight: bold; font-size: 16px; }
+    .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+    .modal-btns .btn { flex: 1; }
+
+    /* TOAST */
+    #toast { position: fixed; bottom: 20px; right: 20px; padding: 10px 18px; border-radius: 6px; color: #fff; font-size: 13px; display: none; z-index: 200; }
+
+    /* TWO COL */
+    .two-col { display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
+    .search-bar { padding: 8px 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 13px; margin-bottom: 16px; width: 280px; }
+    h2 { margin-bottom: 20px; }
+    h4 { margin-bottom: 14px; }
+    .bar-wrap { background: #eee; height: 8px; border-radius: 4px; margin-top: 4px; }
+    .bar { height: 8px; border-radius: 4px; }
+    .rate-box { border: 1px solid #eee; border-radius: 6px; padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .two-dash { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .empty { padding: 30px; text-align: center; color: #aaa; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="brand">🅿 ParkZone</div>
+  <button class="active" onclick="showPage('dashboard')">Dashboard</button>
+  <button onclick="showPage('entry')">Entry</button>
+  <button onclick="showPage('exit')">Exit</button>
+  <button onclick="showPage('slots')">Slot Map</button>
+  <button onclick="showPage('records')">Records</button>
+  <button onclick="showPage('payments')">Payments</button>
+</nav>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- EXIT MODAL -->
+<div class="overlay" id="exitModal">
+  <div class="modal">
+    <h3>Checkout Bill</h3>
+    <div id="modalBody"></div>
+    <div class="modal-total"><span>Total</span><span id="modalTotal" style="color:#276749"></span></div>
+    <div class="form-group" style="margin-top:14px">
+      <label>Payment Method</label>
+      <select id="payMethod">
+        <option>Cash</option><option>UPI</option><option>Card</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-green" onclick="confirmExit()">Confirm Payment</button>
+      <button class="btn btn-gray" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="page active" id="page-dashboard">
+  <h2>Dashboard</h2>
+  <div class="stat-grid">
+    <div class="stat" style="border-top:4px solid #276749"><div class="label">Available Slots</div><div class="value" id="s-avail" style="color:#276749">—</div></div>
+    <div class="stat" style="border-top:4px solid #c53030"><div class="label">Occupied Slots</div><div class="value" id="s-occ" style="color:#c53030">—</div></div>
+    <div class="stat" style="border-top:4px solid #b7791f"><div class="label">Active Vehicles</div><div class="value" id="s-active" style="color:#b7791f">—</div></div>
+    <div class="stat" style="border-top:4px solid #2b6cb0"><div class="label">Today's Revenue</div><div class="value" id="s-rev" style="color:#2b6cb0">—</div></div>
+  </div>
+  <div class="two-dash">
+    <div class="card">
+      <h4>Slot Availability</h4>
+      <div id="slotBars"></div>
+    </div>
+    <div class="card">
+      <h4>Recent Activity</h4>
+      <div id="recentActivity"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ENTRY ===== -->
+<div class="page" id="page-entry">
+  <h2>Vehicle Entry</h2>
+  <div class="two-col">
+    <div class="card">
+      <h4>Register Vehicle</h4>
+      <div class="form-group"><label>Plate Number *</label><input id="f-plate" placeholder="MH12AB1234" /></div>
+      <div class="form-group"><label>Vehicle Type *</label>
+        <select id="f-type">
+          <option>4-Wheeler</option><option>2-Wheeler</option><option>Heavy Vehicle</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Owner Name</label><input id="f-owner" placeholder="Optional" /></div>
+      <div class="form-group"><label>Phone</label><input id="f-phone" placeholder="Optional" /></div>
+      <button class="btn btn-blue" onclick="submitEntry()">Allocate Slot & Enter</button>
+    </div>
+    <div class="card">
+      <h4>Rates & Availability</h4>
+      <div id="rateBoxes"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EXIT ===== -->
+<div class="page" id="page-exit">
+  <h2>Vehicle Exit</h2>
+  <input class="search-bar" id="exitSearch" placeholder="Search by plate or slot..." oninput="renderExitTable()" />
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Plate</th><th>Slot</th><th>Type</th><th>Owner</th><th>Entry</th><th>Est. Charge</th><th>Action</th></tr></thead>
+      <tbody id="exitTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== SLOTS ===== -->
+<div class="page" id="page-slots">
+  <h2>Slot Map</h2>
+  <div id="slotMap"></div>
+</div>
+
+<!-- ===== RECORDS ===== -->
+<div class="page" id="page-records">
+  <h2>Parking Records</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Plate</th><th>Slot</th><th>Type</th><th>Owner</th><th>Entry</th><th>Exit</th><th>Hours</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody id="recordsTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== PAYMENTS ===== -->
+<div class="page" id="page-payments">
+  <h2>Payments</h2>
+  <div class="stat-grid" style="grid-template-columns:repeat(3,1fr); margin-bottom:20px">
+    <div class="stat" style="border-top:4px solid #276749"><div class="label">Total Collected</div><div class="value" id="p-total" style="color:#276749">—</div></div>
+    <div class="stat" style="border-top:4px solid #b7791f"><div class="label">Today's Revenue</div><div class="value" id="p-today" style="color:#b7791f">—</div></div>
+    <div class="stat" style="border-top:4px solid #2b6cb0"><div class="label">Transactions</div><div class="value" id="p-count" style="color:#2b6cb0">—</div></div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Plate</th><th>Amount</th><th>Method</th><th>Time</th></tr></thead>
+      <tbody id="paymentsTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const API = "http://127.0.0.1:5000";
+  const RATES = { "2-Wheeler": 20, "4-Wheeler": 50, "Heavy Vehicle": 100 };
+  let allSlots = [], allRecords = [], allPayments = [], exitRecordId = null;
+
+  // ── UTILS ──
+  function fmt(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-IN") + " " + d.toLocaleTimeString("en-IN", { hour:"2-digit", minute:"2-digit", hour12:true });
+  }
+  function calcHrs(entry) {
+    return Math.max(1, Math.ceil((Date.now() - new Date(entry)) / 3600000));
+  }
+  function toast(msg, err) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.style.background = err ? "#e53e3e" : "#276749";
+    t.style.display = "block";
+    setTimeout(() => t.style.display = "none", 3000);
+  }
+  function todayStr() { return new Date().toLocaleDateString("en-IN"); }
+
+  // ── FETCH ALL DATA ──
+  async function loadAll() {
+    try {
+      const [s, r, p] = await Promise.all([
+        fetch(`${API}/slots`).then(x => x.json()),
+        fetch(`${API}/records`).then(x => x.json()),
+        fetch(`${API}/payments`).then(x => x.json()),
+      ]);
+      allSlots = s; allRecords = r; allPayments = p;
+      renderAll();
+    } catch(e) {
+      toast("Cannot connect to server. Is Flask running?", true);
+    }
+  }
+
+  function renderAll() {
+    renderDashboard();
+    renderRateBoxes();
+    renderExitTable();
+    renderSlotMap();
+    renderRecords();
+    renderPayments();
+  }
+
+  // ── DASHBOARD ──
+  function renderDashboard() {
+    const avail  = allSlots.filter(s => s.status === "Available").length;
+    const occ    = allSlots.filter(s => s.status === "Occupied").length;
+    const active = allRecords.filter(r => !r.exit_time).length;
+    const todayRev = allPayments.filter(p => new Date(p.time).toLocaleDateString("en-IN") === todayStr())
+                                .reduce((a, p) => a + p.amount, 0);
+    document.getElementById("s-avail").textContent  = avail;
+    document.getElementById("s-occ").textContent    = occ;
+    document.getElementById("s-active").textContent = active;
+    document.getElementById("s-rev").textContent    = "₹" + todayRev;
+
+    // Bars
+    const types = ["2-Wheeler","4-Wheeler","Heavy Vehicle"];
+    document.getElementById("slotBars").innerHTML = types.map(type => {
+      const all  = allSlots.filter(s => s.type === type);
+      const free = all.filter(s => s.status === "Available").length;
+      const pct  = all.length ? Math.round((free/all.length)*100) : 0;
+      const col  = pct > 50 ? "#276749" : "#c53030";
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+          <span>${type}</span><span style="color:#888">${free}/${all.length} free</span>
+        </div>
+        <div class="bar-wrap"><div class="bar" style="width:${pct}%;background:${col}"></div></div>
+      </div>`;
+    }).join("");
+
+    // Recent
+    const recent = [...allRecords].reverse().slice(0,6);
+    document.getElementById("recentActivity").innerHTML = recent.length === 0
+      ? `<p style="color:#aaa">No activity yet.</p>`
+      : recent.map(r => `
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px">
+          <span>${r.plate} — <span style="color:#888">Slot ${r.slot_number}</span></span>
+          <span class="badge ${r.exit_time ? 'badge-green' : 'badge-yellow'}">${r.exit_time ? "Exited" : "Active"}</span>
+        </div>`).join("");
+  }
+
+  // ── ENTRY ──
+  function renderRateBoxes() {
+    const types = ["2-Wheeler","4-Wheeler","Heavy Vehicle"];
+    document.getElementById("rateBoxes").innerHTML = types.map(type => {
+      const free  = allSlots.filter(s => s.type === type && s.status === "Available").length;
+      const total = allSlots.filter(s => s.type === type).length;
+      return `<div class="rate-box">
+        <div><div style="font-weight:bold">${type}</div>
+        <div style="color:#3182ce;font-size:18px;font-weight:bold">₹${RATES[type]}/hr</div></div>
+        <span class="badge ${free>0?'badge-green':'badge-red'}">${free}/${total} Free</span>
+      </div>`;
+    }).join("");
+  }
+
+  async function submitEntry() {
+    const plate = document.getElementById("f-plate").value.trim().toUpperCase();
+    const type  = document.getElementById("f-type").value;
+    const owner = document.getElementById("f-owner").value.trim();
+    const phone = document.getElementById("f-phone").value.trim();
+    if (!plate) return toast("Enter plate number", true);
+    try {
+      const res = await fetch(`${API}/entry`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ plate, type, owner, phone })
+      });
+      const data = await res.json();
+      if (!res.ok) return toast(data.error, true);
+      toast(data.message);
+      document.getElementById("f-plate").value = "";
+      document.getElementById("f-owner").value = "";
+      document.getElementById("f-phone").value = "";
+      loadAll();
+    } catch(e) { toast("Server error", true); }
+  }
+
+  // ── EXIT ──
+  function renderExitTable() {
+    const q = (document.getElementById("exitSearch")?.value || "").toUpperCase();
+    const active = allRecords.filter(r => !r.exit_time &&
+      (r.plate.includes(q) || r.slot_number.includes(q)));
+    const tbody = document.getElementById("exitTable");
+    if (active.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty">No active vehicles</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = active.map(r => {
+      const hrs = calcHrs(r.entry_time);
+      const est = hrs * RATES[r.type];
+      return `<tr>
+        <td><b>${r.plate}</b></td>
+        <td>${r.slot_number}</td>
+        <td style="color:#888">${r.type}</td>
+        <td>${r.owner}</td>
+        <td style="color:#888">${fmt(r.entry_time)}</td>
+        <td style="color:#276749;font-weight:bold">₹${est}</td>
+        <td><button class="btn btn-red" onclick="openExit(${r.id})">Checkout</button></td>
+      </tr>`;
+    }).join("");
+  }
+
+  function openExit(id) {
+    const r = allRecords.find(x => x.id === id);
+    if (!r) return;
+    exitRecordId = id;
+    const now  = new Date();
+    const hrs  = calcHrs(r.entry_time);
+    const amt  = hrs * RATES[r.type];
+    document.getElementById("modalBody").innerHTML = [
+      ["Vehicle", r.plate], ["Slot", r.slot_number], ["Owner", r.owner],
+      ["Entry", fmt(r.entry_time)], ["Exit", fmt(now.toISOString())],
+      ["Duration", `${hrs} hr(s)`], ["Rate", `₹${RATES[r.type]}/hr`]
+    ].map(([k,v]) => `<div class="modal-row"><span>${k}</span><span>${v}</span></div>`).join("");
+    document.getElementById("modalTotal").textContent = "₹" + amt;
+    document.getElementById("exitModal").classList.add("open");
+  }
+
+  async function confirmExit() {
+    const method = document.getElementById("payMethod").value;
+    try {
+      const res = await fetch(`${API}/exit/${exitRecordId}`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ method })
+      });
+      const data = await res.json();
+      if (!res.ok) return toast(data.error, true);
+      toast(`₹${data.amount} collected!`);
+      closeModal();
+      loadAll();
+    } catch(e) { toast("Server error", true); }
+  }
+
+  function closeModal() {
+    document.getElementById("exitModal").classList.remove("open");
+    exitRecordId = null;
+  }
+
+  // ── SLOT MAP ──
+  function renderSlotMap() {
+    const types = ["2-Wheeler","4-Wheeler","Heavy Vehicle"];
+    document.getElementById("slotMap").innerHTML = types.map(type => {
+      const typeSlots = allSlots.filter(s => s.type === type);
+      const boxes = typeSlots.map(s => {
+        const rec = s.status === "Occupied" ? allRecords.find(r => r.slot_number === s.number && !r.exit_time) : null;
+        const cls = s.status === "Available" ? "slot-free" : "slot-occ";
+        const icon = s.status === "Available" ? "🟢" : "🔴";
+        const sub  = s.status === "Available" ? "Free" : (rec?.plate?.slice(-4) || "Occ");
+        return `<div class="slot-box ${cls}" title="${rec ? rec.plate : 'Free'}">
+          <div style="font-size:18px">${icon}</div>
+          <div style="font-weight:bold">${s.number}</div>
+          <div style="font-size:10px;color:#999">${sub}</div>
+        </div>`;
+      }).join("");
+      return `<div class="card" style="margin-bottom:16px">
+        <h4>${type} — ₹${RATES[type]}/hr</h4>
+        <div class="slot-grid">${boxes}</div>
+      </div>`;
+    }).join("");
+  }
+
+  // ── RECORDS ──
+  function renderRecords() {
+    const tbody = document.getElementById("recordsTable");
+    if (allRecords.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="10" class="empty">No records yet</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = [...allRecords].reverse().map(r => `
+      <tr>
+        <td style="color:#999">#${r.id}</td>
+        <td><b>${r.plate}</b></td>
+        <td>${r.slot_number}</td>
+        <td style="color:#888">${r.type}</td>
+        <td>${r.owner}</td>
+        <td style="color:#888">${fmt(r.entry_time)}</td>
+        <td style="color:#888">${fmt(r.exit_time)}</td>
+        <td>${r.hours || "—"}</td>
+        <td style="color:#276749;font-weight:bold">${r.amount ? "₹"+r.amount : "—"}</td>
+        <td><span class="badge ${r.exit_time ? 'badge-green' : 'badge-yellow'}">${r.exit_time ? "Done" : "Active"}</span></td>
+      </tr>`).join("");
+  }
+
+  // ── PAYMENTS ──
+  function renderPayments() {
+    const total    = allPayments.reduce((a,p) => a + p.amount, 0);
+    const todayRev = allPayments.filter(p => new Date(p.time).toLocaleDateString("en-IN") === todayStr())
+                                .reduce((a,p) => a + p.amount, 0);
+    document.getElementById("p-total").textContent = "₹" + total;
+    document.getElementById("p-today").textContent = "₹" + todayRev;
+    document.getElementById("p-count").textContent = allPayments.length;
+
+    const tbody = document.getElementById("paymentsTable");
+    if (allPayments.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty">No payments yet</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = [...allPayments].reverse().map(p => `
+      <tr>
+        <td style="color:#999">#${p.id}</td>
+        <td><b>${p.plate}</b></td>
+        <td style="color:#276749;font-weight:bold;font-size:15px">₹${p.amount}</td>
+        <td><span class="badge badge-blue">${p.method}</span></td>
+        <td style="color:#888">${fmt(p.time)}</td>
+      </tr>`).join("");
+  }
+
+  // ── NAV ──
+  function showPage(name) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+    document.getElementById("page-" + name).classList.add("active");
+    event.target.classList.add("active");
+    loadAll();
+  }
+
+  // ── INIT ──
+  loadAll();
+  setInterval(loadAll, 15000); // auto-refresh every 15s
+</script>
+</body>
+</html>
