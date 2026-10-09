@@ -24,7 +24,8 @@ A parking management backend built with Python, Flask and MySQL. It allocates sl
 parking-system/
 ├── app.py          # Flask application and API routes
 ├── database.py     # MySQL connection and default slot setup
-├── schema.sql      # Table definitions
+├── schema.sql      # MySQL table definitions
+├── requirements.txt
 └── frontend/       # Browser interface
 ```
 
@@ -58,53 +59,41 @@ cd parking-system
 ### 2. Install dependencies
 
 ```bash
-pip install flask flask-cors mysql-connector-python
+pip install -r requirements.txt
 ```
 
 ### 3. Create the database and tables
 
-Log in to MySQL and run:
+```bash
+sudo mysql < schema.sql
+```
 
-```sql
-CREATE DATABASE IF NOT EXISTS parking_system;
-USE parking_system;
+This creates the `parking_system` database and the `slots`, `records` and `payments` tables.
 
-CREATE TABLE IF NOT EXISTS slots (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    number VARCHAR(10) NOT NULL,
-    type VARCHAR(20) NOT NULL,
-    status VARCHAR(20) DEFAULT 'Available'
-);
+Then create a MySQL user for the app. Replace the user name and password with your own:
 
-CREATE TABLE IF NOT EXISTS records (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    plate VARCHAR(20) NOT NULL,
-    slot_id INT,
-    slot_number VARCHAR(10),
-    type VARCHAR(20),
-    owner VARCHAR(100),
-    phone VARCHAR(20),
-    entry_time DATETIME,
-    exit_time DATETIME NULL,
-    hours INT,
-    amount INT,
-    FOREIGN KEY (slot_id) REFERENCES slots(id)
-);
+````bash
+sudo mysql -e "CREATE USER 'your_mysql_user'@'localhost' IDENTIFIED BY 'your_mysql_password'; GRANT ALL PRIVILEGES ON parking_system.* TO 'your_mysql_user'@'localhost';"
+```
 
-CREATE TABLE IF NOT EXISTS payments (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    record_id INT,
-    plate VARCHAR(20),
-    amount INT,
-    method VARCHAR(20),
-    time DATETIME,
-    FOREIGN KEY (record_id) REFERENCES records(id)
-);
+Then create a MySQL user for the app. Replace the user name and password with your own:
+
+````bash
+sudo mysql -e "CREATE USER 'your_mysql_user'@'localhost' IDENTIFIED BY 'your_mysql_password'; GRANT ALL PRIVILEGES ON parking_system.* TO 'your_mysql_user'@'localhost';"
 ```
 
 ### 4. Configure the database connection
 
-Open `database.py` and set `DB_CONFIG` to your own MySQL host, user, password and database name. Do not commit your real password to the repository.
+The app reads its MySQL settings from environment variables, so no password is stored in the code.
+
+```bash
+export DB_USER='your_mysql_user'
+export DB_USER='your_mysql_user'
+export DB_PASSWORD='your_mysql_password'
+# Optional, these are the defaults:
+# export DB_HOST=localhost
+# export DB_NAME=parking_system
+```
 
 ### 5. Run the server
 
@@ -116,7 +105,7 @@ The first run inserts the default slots. The API is then available at `http://12
 
 ### 6. Open the frontend
 
-With the server running, open the files in `frontend/` in your browser.
+With the server running, open `frontend/index.html` in your browser.
 
 ## API Reference
 
@@ -190,7 +179,6 @@ If the record does not exist, the API returns HTTP 404 with `{ "error": "Record 
 - Add authentication for the API.
 - Prevent a parking record from being closed twice.
 - Validate that the vehicle type and payment method are from a fixed list.
-- Move the database credentials into environment variables.
 - Add automated tests for the entry, exit and billing logic.
 - Turn off Flask debug mode for production use.
 
